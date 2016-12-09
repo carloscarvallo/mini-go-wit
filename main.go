@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -18,7 +19,14 @@ func main() {
 
 	wittoken := os.Getenv("WITAI_TOKEN")
 
-	url := "https://api.wit.ai/message?v=20160526&q=cual%2520es%2520el%2520clima%2520en%2520asuncion"
+	msg := "Cual es el clima en Asuncion?"
+	v := url.Values{}
+	v.Add("v", "2016052")
+	v.Add("q", msg)
+	encodedValues := v.Encode()
+	baseURL := "https://api.wit.ai/message"
+
+	url := fmt.Sprintf("%s?%s", baseURL, encodedValues)
 	req, _ := http.NewRequest("GET", url, nil)
 
 	req.Header.Add("authorization", "Bearer "+wittoken)
