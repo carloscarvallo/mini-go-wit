@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -8,41 +9,53 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
 
 const (
-	baseURL = "https://api.wit.ai/message"
+	baseURL = "https://api.wit.ai"
 )
 
-func main() {
-	// Read environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+var err = godotenv.Load()
+var wittoken = os.Getenv("WITAI_TOKEN")
+
+// Message struct for json
+type Message struct {
+	ID      int    `json:"id,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+func postMessage(w http.ResponseWriter, req *http.Request) {
+	var msg Message
+	dec := json.NewDecoder(req.Body)
+	decErr := dec.Decode(&msg)
+	if decErr != nil {
+		log.Fatal(decErr)
 	}
-	wittoken := os.Getenv("WITAI_TOKEN")
-
-	// Hardcoding message yet
-	msg := "Cual es el clima en Asuncion?"
-
-	// Attaching query params for the wit.ai API
+	// Attaching query params
+	resource := "/message"
+	u, _ := url.ParseRequestURI(baseURL)
+	u.Path = resource
 	v := url.Values{}
 	v.Add("v", "2016052")
-	v.Add("q", msg)
-	// Encode all values
-	encodedValues := v.Encode()
+	v.Add("q", msg.Message)
 
-	// Return a string with that format
-	url := fmt.Sprintf("%s?%s", baseURL, encodedValues)
-	// Use NewRequest for control HTTP headers in this case adding wit_token
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Add("authorization", "Bearer "+wittoken)
-	res, _ := http.DefaultClient.Do(req)
+	encodedValues := v.Encode()
+	url := fmt.Sprintf("%s?%s", u, encodedValues)
+	fmt.Println("url", url)
+	request, _ := http.NewRequest("GET", url, nil)
+	request.Header.Add("authorization", "Bearer "+wittoken)
+	res, _ := http.DefaultClient.Do(request)
 
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(body)
+}
 
-	// printing the body
-	fmt.Println(string(body))
+func main() {
+	router := mux.NewRouter()
+	router.HandleFunc("/message", postMessage).Methods("POST")
+	log.Fatal(http.ListenAndServe(":12345", router))
 }
