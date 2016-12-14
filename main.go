@@ -33,23 +33,28 @@ func postMessage(w http.ResponseWriter, req *http.Request) {
 	if decErr != nil {
 		log.Fatal(decErr)
 	}
-	// Attaching query params
+	
+	// adding uri resource
 	resource := "/message"
 	u, _ := url.ParseRequestURI(baseURL)
 	u.Path = resource
+	
+	// attaching query params
 	v := url.Values{}
 	v.Add("v", "2016052")
 	v.Add("q", msg.Message)
-
 	encodedValues := v.Encode()
 	url := fmt.Sprintf("%s?%s", u, encodedValues)
-	fmt.Println("url", url)
+	
+	// make request
 	request, _ := http.NewRequest("GET", url, nil)
 	request.Header.Add("authorization", "Bearer "+wittoken)
+	
 	res, _ := http.DefaultClient.Do(request)
-
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
+	
+	// write json to http.Response
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(body)
 }
