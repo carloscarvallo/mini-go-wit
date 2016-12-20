@@ -47,8 +47,8 @@ type ReicevedMsg struct {
 				Mid  string `json:"mid"`
 				Seq  int    `json:"seq"`
 				Text string `json:"text"`
-			} `json:"message"`
-		} `json:"messaging"`
+			} `json:"message,omitempty"`
+		} `json:"messaging,omitempty"`
 	} `json:"entry"`
 }
 
@@ -67,7 +67,7 @@ func tokenVerify(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func receiver(w http.ResponseWriter, req *http.Request) {
+func msgReceiver(w http.ResponseWriter, req *http.Request) {
 	var msg ReicevedMsg
 	dec := json.NewDecoder(req.Body)
 	decErr := dec.Decode(&msg)
@@ -75,9 +75,21 @@ func receiver(w http.ResponseWriter, req *http.Request) {
 		log.Fatal(decErr)
 	}
 	if msg.Object == "page" {
-		messagingArray := msg.Entry[0].Messaging
-		for _, value := range messagingArray {
-			fmt.Println(value.Message.Text)
+		entryArr := msg.Entry
+		for _, value := range entryArr {
+			//fmt.Println(value.ID)
+			//fmt.Println(value.Time)
+			messagingArr := value.Messaging
+			for _, value := range messagingArr {
+				type Message struct {
+					Mid  string `json:"mid"`
+					Seq  int    `json:"seq"`
+					Text string `json:"text"`
+				}
+				if (Message{}) != value.Message {
+					fmt.Println("message is provided")
+				}
+			}
 		}
 	}
 }
@@ -121,6 +133,6 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/message", postMessage).Methods("POST")
 	router.HandleFunc("/webhook", tokenVerify).Methods("GET")
-	router.HandleFunc("/webhook", receiver).Methods("POST")
+	router.HandleFunc("/webhook", msgReceiver).Methods("POST")
 	log.Fatal(http.ListenAndServe(":5000", router))
 }
