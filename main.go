@@ -15,9 +15,9 @@ import (
 
 var err = godotenv.Load()
 
-var wit_token = os.Getenv("WIT_TOKEN")
-var fb_token = os.Getenv("FB_TOKEN")
-var app_token = os.Getenv("APP_TOKEN")
+var witToken = os.Getenv("WIT_TOKEN")
+var fbToken = os.Getenv("FB_TOKEN")
+var appToken = os.Getenv("APP_TOKEN")
 
 const (
 	baseURL = "https://api.wit.ai"
@@ -31,9 +31,17 @@ type Message struct {
 
 func tokenVerify(w http.ResponseWriter, req *http.Request) {
 	params := req.URL.Query()
-	hub_mode := params.Get("hub.mode")
-	verify_token := params.Get("hub.verify_token")
-	fmt.Println(hub_mode, verify_token)
+	hubMode := params.Get("hub.mode")
+	verifyToken := params.Get("hub.verify_token")
+	challenge := params.Get("hub.challenge")
+
+	if hubMode == "subscribe" && verifyToken == appToken {
+		fmt.Println("validating Webhook")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(challenge))
+	} else {
+		fmt.Println("Failed Validation. Make sure the token match")
+	}
 }
 
 func postMessage(w http.ResponseWriter, req *http.Request) {
@@ -58,7 +66,7 @@ func postMessage(w http.ResponseWriter, req *http.Request) {
 
 	// make request
 	request, _ := http.NewRequest("GET", url, nil)
-	request.Header.Add("authorization", "Bearer "+wit_token)
+	request.Header.Add("authorization", "Bearer "+witToken)
 
 	res, _ := http.DefaultClient.Do(request)
 	defer res.Body.Close()
