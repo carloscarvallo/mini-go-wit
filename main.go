@@ -3,10 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 
 	"github.com/gorilla/mux"
@@ -23,10 +21,11 @@ const (
 	baseURL = "https://api.wit.ai"
 )
 
-// Message struct for json
+// Message struct for the nested message coming from the json req
 type Message struct {
-	ID      int    `json:"id,omitempty"`
-	Message string `json:"message,omitempty"`
+	Mid  string `json:"mid"`
+	Seq  int    `json:"seq"`
+	Text string `json:"text"`
 }
 
 // ReicevedMsg struct from the Webhook
@@ -42,12 +41,8 @@ type ReicevedMsg struct {
 			Recipient struct {
 				ID string `json:"id"`
 			} `json:"recipient"`
-			Timestamp int64 `json:"timestamp"`
-			Message   struct {
-				Mid  string `json:"mid"`
-				Seq  int    `json:"seq"`
-				Text string `json:"text"`
-			} `json:"message,omitempty"`
+			Timestamp int64   `json:"timestamp"`
+			Message   Message `json:"message,omitempty"`
 		} `json:"messaging,omitempty"`
 	} `json:"entry"`
 }
@@ -81,13 +76,10 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 			//fmt.Println(value.Time)
 			messagingArr := value.Messaging
 			for _, value := range messagingArr {
-				type Message struct {
-					Mid  string `json:"mid"`
-					Seq  int    `json:"seq"`
-					Text string `json:"text"`
-				}
 				if (Message{}) != value.Message {
-					fmt.Println("message is provided")
+					fmt.Println("message is came")
+				} else {
+					fmt.Println("webhook received unknown event")
 				}
 			}
 		}
@@ -95,38 +87,40 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 }
 
 func postMessage(w http.ResponseWriter, req *http.Request) {
-	var msg Message
-	dec := json.NewDecoder(req.Body)
-	decErr := dec.Decode(&msg)
-	if decErr != nil {
-		log.Fatal(decErr)
-	}
+	/*
+		var msg Message
+		dec := json.NewDecoder(req.Body)
+		decErr := dec.Decode(&msg)
+		if decErr != nil {
+			log.Fatal(decErr)
+		}
 
-	// adding uri resource
-	resource := "/message"
-	u, _ := url.ParseRequestURI(baseURL)
-	u.Path = resource
+		// adding uri resource
+		resource := "/message"
+		u, _ := url.ParseRequestURI(baseURL)
+		u.Path = resource
 
-	// attaching query params
-	v := url.Values{}
-	v.Add("v", "2016052")
-	v.Add("q", msg.Message)
-	encodedValues := v.Encode()
-	url := fmt.Sprintf("%s?%s", u, encodedValues)
+		// attaching query params
+		v := url.Values{}
+		v.Add("v", "2016052")
+		v.Add("q", msg.Message)
+		encodedValues := v.Encode()
+		url := fmt.Sprintf("%s?%s", u, encodedValues)
 
-	// make request
-	request, _ := http.NewRequest("GET", url, nil)
-	request.Header.Add("authorization", "Bearer "+witToken)
+		// make request
+		request, _ := http.NewRequest("GET", url, nil)
+		request.Header.Add("authorization", "Bearer "+witToken)
 
-	res, _ := http.DefaultClient.Do(request)
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+		res, _ := http.DefaultClient.Do(request)
+		defer res.Body.Close()
+		body, _ := ioutil.ReadAll(res.Body)
 
-	fmt.Println(string(body))
+		fmt.Println(string(body))
 
-	// write json to http.Response
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(body)
+		// write json to http.Response
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(body)
+	*/
 }
 
 func main() {
