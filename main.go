@@ -29,6 +29,29 @@ type Message struct {
 	Message string `json:"message,omitempty"`
 }
 
+// ReicevedMsg from the Webhook
+type ReicevedMsg struct {
+	Object string `json:"object"`
+	Entry  []struct {
+		ID        string `json:"id"`
+		Time      int64  `json:"time"`
+		Messaging []struct {
+			Sender struct {
+				ID string `json:"id"`
+			} `json:"sender"`
+			Recipient struct {
+				ID string `json:"id"`
+			} `json:"recipient"`
+			Timestamp int64 `json:"timestamp"`
+			Message   struct {
+				Mid  string `json:"mid"`
+				Seq  int    `json:"seq"`
+				Text string `json:"text"`
+			} `json:"message"`
+		} `json:"messaging"`
+	} `json:"entry"`
+}
+
 func tokenVerify(w http.ResponseWriter, req *http.Request) {
 	params := req.URL.Query()
 	hubMode := params.Get("hub.mode")
@@ -42,6 +65,18 @@ func tokenVerify(w http.ResponseWriter, req *http.Request) {
 	} else {
 		fmt.Println("Failed Validation. Make sure the token match")
 	}
+}
+
+func receiver(w http.ResponseWriter, req *http.Request) {
+	bodyBuffer, _ := ioutil.ReadAll(req.Body)
+	jsonStr := string(bodyBuffer)
+
+	fmt.Println(jsonStr)
+	var m map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &m); err != nil {
+		panic(err)
+	}
+	fmt.Println(m)
 }
 
 func postMessage(w http.ResponseWriter, req *http.Request) {
@@ -83,5 +118,6 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/message", postMessage).Methods("POST")
 	router.HandleFunc("/webhook", tokenVerify).Methods("GET")
+	router.HandleFunc("/webhook", receiver).Methods("POST")
 	log.Fatal(http.ListenAndServe(":5000", router))
 }
