@@ -29,7 +29,7 @@ type Message struct {
 	Message string `json:"message,omitempty"`
 }
 
-// ReicevedMsg from the Webhook
+// ReicevedMsg struct from the Webhook
 type ReicevedMsg struct {
 	Object string `json:"object"`
 	Entry  []struct {
@@ -68,15 +68,18 @@ func tokenVerify(w http.ResponseWriter, req *http.Request) {
 }
 
 func receiver(w http.ResponseWriter, req *http.Request) {
-	bodyBuffer, _ := ioutil.ReadAll(req.Body)
-	jsonStr := string(bodyBuffer)
-
-	fmt.Println(jsonStr)
-	var m map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonStr), &m); err != nil {
-		panic(err)
+	var msg ReicevedMsg
+	dec := json.NewDecoder(req.Body)
+	decErr := dec.Decode(&msg)
+	if decErr != nil {
+		log.Fatal(decErr)
 	}
-	fmt.Println(m)
+	if msg.Object == "page" {
+		messagingArray := msg.Entry[0].Messaging
+		for _, value := range messagingArray {
+			fmt.Println(value.Message.Text)
+		}
+	}
 }
 
 func postMessage(w http.ResponseWriter, req *http.Request) {
