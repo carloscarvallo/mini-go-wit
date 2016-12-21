@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -23,6 +24,32 @@ var appToken = os.Getenv("APP_TOKEN")
 const (
 	baseURL = "https://api.wit.ai"
 )
+
+type AIResponse struct {
+	Msg      string
+	Entities *Entities
+	Intent   string
+}
+
+type Entities struct {
+	Location []struct {
+		Confidence float64 `json:"confidence"`
+		Type       string  `json:"type"`
+		Value      string  `json:"value"`
+		Suggested  bool    `json:"suggested"`
+	} `json:"location,omitempty"`
+	Intent []struct {
+		Confidence float64 `json:"confidence"`
+		Value      string  `json:"value"`
+	} `json:"intent,omitempty"`
+}
+
+type Converse struct {
+	Confidence float64   `json:"confidence"`
+	Type       string    `json:"type"`
+	Msg        string    `json:"msg"`
+	Entities   *Entities `json:"entities,omitempty"`
+}
 
 // Message struct for the message ifself
 type Message struct {
@@ -83,7 +110,7 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 			messagingArr := value.Messaging
 			for _, value := range messagingArr {
 				if value.Message != nil {
-					receivedMessage(messagingArr)
+					msgParser(messagingArr)
 				} else {
 					fmt.Println("webhook received unknown event")
 				}
@@ -92,7 +119,7 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func receivedMessage(event Messaging) {
+func msgParser(event Messaging) {
 	for _, value := range event {
 		senderID := value.Sender.ID
 		recipientID := value.Recipient.ID
@@ -122,7 +149,6 @@ func sendToAI(senderID string, messageText string) {
 	v.Add("q", messageText)
 	encodedValues := v.Encode()
 	url := fmt.Sprintf("%s?%s", u, encodedValues)
-	fmt.Println(url)
 
 	// make request
 	request, _ := http.NewRequest("POST", url, nil)
@@ -134,19 +160,78 @@ func sendToAI(senderID string, messageText string) {
 	body, _ := ioutil.ReadAll(res.Body)
 
 	fmt.Println(string(body))
+
+	//parse JSON
+	var converse Converse
+	json.Unmarshal(body, &converse)
+
+	conversationRes := converse.Msg
+	conversationEnt := converse.Entities
+	conversationIntArr := conversationEnt.Intent
+	var conversationInt string
+
+	for _, value := range conversationIntArr {
+		conversationInt = value.Value
+	}
+
+	aiRes := AIResponse{conversationRes, conversationEnt, conversationInt}
+	formatMessage(senderID, aiRes)
+
 }
 
-func postMessage(w http.ResponseWriter, req *http.Request) {
-	/*
-		// write json to http.Response
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(body)
-	*/
+func formatMessage(senderID string, aiRes AIResponse) {
+	aiResMsg := aiRes.Msg
+
+	type Recipient struct {
+		ID string `json:"id"`
+	}
+
+	type Message struct {
+		Text string `json:"text"`
+	}
+
+	type msgPayload struct {
+		Recipient `json:"recipient"`
+		Message   `json:"message"`
+	}
+
+	data := &msgPayload{
+		Recipient: Recipient{
+			ID: senderID,
+		},
+		Message: Message{
+			Text: aiResMsg,
+		},
+	}
+
+	payloadBytes, err := json.Marshal(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	postMessage(payloadBytes)
+}
+
+func postMessage(payloadBytes []byte) {
+
+	body := bytes.NewReader(payloadBytes)
+
+	req, err := http.NewRequest("POST", "https://graph.facebook.com/v2.6/me/messages?access_token="+fbToken, body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer resp.Body.Close()
 }
 
 func main() {
 	router := mux.NewRouter()
-	router.HandleFunc("/message", postMessage).Methods("POST")
 	router.HandleFunc("/webhook", tokenVerify).Methods("GET")
 	router.HandleFunc("/webhook", msgReceiver).Methods("POST")
 	log.Fatal(http.ListenAndServe(":5000", router))
