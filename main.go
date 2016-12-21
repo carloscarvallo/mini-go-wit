@@ -7,16 +7,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
-
 	"net/url"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
 
-var err = godotenv.Load()
-
+var envErr = godotenv.Load()
 var witToken = os.Getenv("WIT_TOKEN")
 var fbToken = os.Getenv("FB_TOKEN")
 var appToken = os.Getenv("APP_TOKEN")
@@ -213,7 +211,6 @@ func formatMessage(senderID string, aiRes AIResponse) {
 }
 
 func postMessage(payloadBytes []byte) {
-
 	body := bytes.NewReader(payloadBytes)
 
 	req, err := http.NewRequest("POST", "https://graph.facebook.com/v2.6/me/messages?access_token="+fbToken, body)
@@ -231,8 +228,15 @@ func postMessage(payloadBytes []byte) {
 }
 
 func main() {
+	port := ":" + os.Args[1]
+
+	// Handle environment vars errors
+	if envErr != nil {
+		log.Fatal(envErr)
+	}
+
 	router := mux.NewRouter()
 	router.HandleFunc("/webhook", tokenVerify).Methods("GET")
 	router.HandleFunc("/webhook", msgReceiver).Methods("POST")
-	log.Fatal(http.ListenAndServe(":5000", router))
+	log.Fatal(http.ListenAndServe(port, router))
 }
