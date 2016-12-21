@@ -21,29 +21,32 @@ const (
 	baseURL = "https://api.wit.ai"
 )
 
-// Message struct for the nested message coming from the json req
+// Message struct for the message ifself
 type Message struct {
 	Mid  string `json:"mid"`
 	Seq  int    `json:"seq"`
 	Text string `json:"text"`
 }
 
+// Messaging struct for more especific data about messages
+type Messaging []struct {
+	Sender struct {
+		ID string `json:"id"`
+	} `json:"sender"`
+	Recipient struct {
+		ID string `json:"id"`
+	} `json:"recipient"`
+	Timestamp int64    `json:"timestamp"`
+	Message   *Message `json:"message,omitempty"`
+}
+
 // ReicevedMsg struct from the Webhook
 type ReicevedMsg struct {
 	Object string `json:"object"`
 	Entry  []struct {
-		ID        string `json:"id"`
-		Time      int64  `json:"time"`
-		Messaging []struct {
-			Sender struct {
-				ID string `json:"id"`
-			} `json:"sender"`
-			Recipient struct {
-				ID string `json:"id"`
-			} `json:"recipient"`
-			Timestamp int64    `json:"timestamp"`
-			Message   *Message `json:"message,omitempty"`
-		} `json:"messaging,omitempty"`
+		ID        string      `json:"id"`
+		Time      int64       `json:"time"`
+		Messaging []Messaging `json:"messaging,omitempty"`
 	} `json:"entry"`
 }
 
@@ -76,14 +79,21 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 			//fmt.Println(value.Time)
 			messagingArr := value.Messaging
 			for _, value := range messagingArr {
-				if value.Message != nil {
-					fmt.Println("message is came")
-				} else {
-					fmt.Println("webhook received unknown event")
-				}
+				fmt.Println(value)
+				/*
+					if value.Message != nil {
+						receivedMessage(messagingArr)
+					} else {
+						fmt.Println("webhook received unknown event")
+					}
+				*/
 			}
 		}
 	}
+}
+
+func receivedMessage(event []Messaging) {
+	fmt.Println()
 }
 
 func postMessage(w http.ResponseWriter, req *http.Request) {
