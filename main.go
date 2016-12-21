@@ -3,9 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+
+	"net/url"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -40,7 +43,7 @@ type Messaging []struct {
 	Message   *Message `json:"message,omitempty"`
 }
 
-// ReicevedMsg struct from the Webhook
+// ReicevedMsg struct for the Webhook Payload
 type ReicevedMsg struct {
 	Object string `json:"object"`
 	Entry  []struct {
@@ -95,42 +98,46 @@ func receivedMessage(event Messaging) {
 		recipientID := value.Recipient.ID
 		timeOfMessage := value.Timestamp
 		message := value.Message
-		fmt.Printf("Received message for user %s and page %s at %d with Message: \n", senderID, recipientID, timeOfMessage)
+		fmt.Printf("\n\nReceived message for user %s and page %s at %d with Message: \n", senderID, recipientID, timeOfMessage)
 		fmt.Printf("%+v", message)
+		//messageID := message.Mid
+		messageText := message.Text
+
+		if senderID != "957404200975823" {
+			sendToAI(senderID, messageText)
+		}
 	}
+}
+
+func sendToAI(senderID string, messageText string) {
+	// adding uri resource
+	resource := "/converse"
+	u, _ := url.ParseRequestURI(baseURL)
+	u.Path = resource
+
+	// attaching query params
+	v := url.Values{}
+	v.Add("v", "2016052")
+	v.Add("session_id", "abc321")
+	v.Add("q", messageText)
+	encodedValues := v.Encode()
+	url := fmt.Sprintf("%s?%s", u, encodedValues)
+	fmt.Println(url)
+
+	// make request
+	request, _ := http.NewRequest("POST", url, nil)
+	request.Header.Add("authorization", "Bearer "+witToken)
+
+	// taking response
+	res, _ := http.DefaultClient.Do(request)
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+
+	fmt.Println(string(body))
 }
 
 func postMessage(w http.ResponseWriter, req *http.Request) {
 	/*
-		var msg Message
-		dec := json.NewDecoder(req.Body)
-		decErr := dec.Decode(&msg)
-		if decErr != nil {
-			log.Fatal(decErr)
-		}
-
-		// adding uri resource
-		resource := "/message"
-		u, _ := url.ParseRequestURI(baseURL)
-		u.Path = resource
-
-		// attaching query params
-		v := url.Values{}
-		v.Add("v", "2016052")
-		v.Add("q", msg.Message)
-		encodedValues := v.Encode()
-		url := fmt.Sprintf("%s?%s", u, encodedValues)
-
-		// make request
-		request, _ := http.NewRequest("GET", url, nil)
-		request.Header.Add("authorization", "Bearer "+witToken)
-
-		res, _ := http.DefaultClient.Do(request)
-		defer res.Body.Close()
-		body, _ := ioutil.ReadAll(res.Body)
-
-		fmt.Println(string(body))
-
 		// write json to http.Response
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(body)
