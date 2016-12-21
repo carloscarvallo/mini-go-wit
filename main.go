@@ -90,7 +90,14 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 }
 
 func receivedMessage(event Messaging) {
-	fmt.Println(event[2].Timestamp)
+	for _, value := range event {
+		senderID := value.Sender.ID
+		recipientID := value.Recipient.ID
+		timeOfMessage := value.Timestamp
+		message := value.Message
+		fmt.Printf("Received message for user %s and page %s at %d with Message: \n", senderID, recipientID, timeOfMessage)
+		fmt.Printf("%+v", message)
+	}
 }
 
 func postMessage(w http.ResponseWriter, req *http.Request) {
