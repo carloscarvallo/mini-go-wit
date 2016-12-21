@@ -41,8 +41,8 @@ type ReicevedMsg struct {
 			Recipient struct {
 				ID string `json:"id"`
 			} `json:"recipient"`
-			Timestamp int64   `json:"timestamp"`
-			Message   Message `json:"message,omitempty"`
+			Timestamp int64    `json:"timestamp"`
+			Message   *Message `json:"message,omitempty"`
 		} `json:"messaging,omitempty"`
 	} `json:"entry"`
 }
@@ -76,7 +76,7 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 			//fmt.Println(value.Time)
 			messagingArr := value.Messaging
 			for _, value := range messagingArr {
-				if (Message{}) != value.Message {
+				if value.Message != nil {
 					fmt.Println("message is came")
 				} else {
 					fmt.Println("webhook received unknown event")
