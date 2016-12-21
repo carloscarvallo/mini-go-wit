@@ -44,9 +44,9 @@ type Messaging []struct {
 type ReicevedMsg struct {
 	Object string `json:"object"`
 	Entry  []struct {
-		ID        string      `json:"id"`
-		Time      int64       `json:"time"`
-		Messaging []Messaging `json:"messaging,omitempty"`
+		ID        string    `json:"id"`
+		Time      int64     `json:"time"`
+		Messaging Messaging `json:"messaging,omitempty"`
 	} `json:"entry"`
 }
 
@@ -79,21 +79,18 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 			//fmt.Println(value.Time)
 			messagingArr := value.Messaging
 			for _, value := range messagingArr {
-				fmt.Println(value)
-				/*
-					if value.Message != nil {
-						receivedMessage(messagingArr)
-					} else {
-						fmt.Println("webhook received unknown event")
-					}
-				*/
+				if value.Message != nil {
+					receivedMessage(messagingArr)
+				} else {
+					fmt.Println("webhook received unknown event")
+				}
 			}
 		}
 	}
 }
 
-func receivedMessage(event []Messaging) {
-	fmt.Println()
+func receivedMessage(event Messaging) {
+	fmt.Println(event[2].Timestamp)
 }
 
 func postMessage(w http.ResponseWriter, req *http.Request) {
