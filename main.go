@@ -90,6 +90,7 @@ func tokenVerify(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte(challenge))
 	} else {
 		fmt.Println("Failed Validation. Make sure the token match")
+		w.WriteHeader(http.StatusForbidden)
 	}
 }
 
@@ -114,6 +115,7 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 				}
 			}
 		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -236,7 +238,7 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.HandleFunc("/webhook", tokenVerify).Methods("GET")
-	router.HandleFunc("/webhook", msgReceiver).Methods("POST")
+	router.HandleFunc("/webhook/", tokenVerify).Methods("GET")
+	router.HandleFunc("/webhook/", msgReceiver).Methods("POST")
 	log.Fatal(http.ListenAndServe(port, router))
 }
