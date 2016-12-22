@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+        "github.com/gorilla/handlers"
 )
 
 var envErr = godotenv.Load()
@@ -240,5 +241,5 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/webhook/", tokenVerify).Methods("GET")
 	router.HandleFunc("/webhook/", msgReceiver).Methods("POST")
-	log.Fatal(http.ListenAndServe(port, router))
+	log.Fatal(http.ListenAndServe(port, handlers.LoggingHandler(os.Stdout, router)))
 }
