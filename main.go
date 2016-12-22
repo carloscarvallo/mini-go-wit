@@ -10,9 +10,9 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-        "github.com/gorilla/handlers"
 )
 
 var envErr = godotenv.Load()
@@ -79,6 +79,11 @@ type ReicevedMsg struct {
 	} `json:"entry"`
 }
 
+func welcome(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Welcome!"))
+}
+
 func tokenVerify(w http.ResponseWriter, req *http.Request) {
 	params := req.URL.Query()
 	hubMode := params.Get("hub.mode")
@@ -117,6 +122,9 @@ func msgReceiver(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	} else {
+		w.WriteHeader(http.StatusForbidden)
 	}
 }
 
@@ -231,7 +239,7 @@ func postMessage(payloadBytes []byte) {
 }
 
 func main() {
-	port := ":" + os.Args[1]
+	port := os.Args[1]
 
 	// Handle environment vars errors
 	if envErr != nil {
@@ -239,7 +247,8 @@ func main() {
 	}
 
 	router := mux.NewRouter()
+	router.HandleFunc("/", welcome).Methods("GET")
 	router.HandleFunc("/webhook/", tokenVerify).Methods("GET")
 	router.HandleFunc("/webhook/", msgReceiver).Methods("POST")
-	log.Fatal(http.ListenAndServe(port, handlers.LoggingHandler(os.Stdout, router)))
+	log.Fatal(http.ListenAndServe(":"+port, handlers.LoggingHandler(os.Stdout, router)))
 }
